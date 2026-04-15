@@ -10,6 +10,24 @@
 
 Professional SVG logo generator with high-end showcase presentations. Generate 6+ design variants based on product characteristics, then create stunning showcase images with 12 professional background styles.
 
+### About
+
+This skill was created to solve a common problem: generating professional logos quickly without sacrificing quality. Traditional logo design requires extensive back-and-forth with designers, while AI-generated logos often lack the refinement and presentation quality needed for real products.
+
+**Logo Generator** bridges this gap by:
+- Applying proven design principles (extreme simplicity, generous negative space, precise proportions)
+- Generating multiple variants to explore different directions
+- Creating production-ready showcase images with professional backgrounds
+- Providing both SVG (editable) and PNG (ready-to-use) formats
+
+Perfect for:
+- **Startups** needing a professional logo quickly
+- **Developers** building side projects
+- **Designers** exploring initial concepts
+- **Product teams** iterating on brand identity
+
+The skill leverages Gemini 3.1 Flash Image Preview (Nano Banana) to generate high-end showcase images that look like they came from a professional design studio.
+
 ### Features
 
 - **SVG Logo Generation**: Create geometric logos with dot matrix, line systems, and mixed compositions
@@ -20,33 +38,45 @@ Professional SVG logo generator with high-end showcase presentations. Generate 6
 
 ### Installation
 
-#### Method 1: AI-Assisted Installation (Recommended)
-
-Simply tell your AI assistant:
-
-```
-Install the logo-generator skill from /path/to/logo-generator
-```
-
-The AI will automatically set up the skill and make it available for use.
-
-#### Method 2: Manual Installation
-
-1. Clone or download this repository
-2. Copy the `logo-generator` folder to your skills directory
-3. Install Python dependencies:
+#### Method 1: Automatic Installation (Recommended)
 
 ```bash
-cd logo-generator
+npx skills add https://github.com/YOUR_USERNAME/logo-generator.git
+```
+
+This will automatically install the skill to the correct directory.
+
+#### Method 2: Git Clone
+
+```bash
+git clone https://github.com/YOUR_USERNAME/logo-generator.git ~/.claude/skills/logo-generator
+```
+
+#### Method 3: Manual Installation
+
+1. Download this repository
+2. Copy the `logo-generator` folder to your Claude Code skills directory:
+   - **macOS/Linux**: `~/.claude/skills/`
+   - **Windows**: `%USERPROFILE%\.claude\skills\`
+3. Ensure the folder structure contains `SKILL.md` and `README.md`
+
+#### Post-Installation Setup
+
+After installation, set up the required dependencies:
+
+```bash
+cd ~/.claude/skills/logo-generator
 pip install -r requirements.txt
 ```
 
-4. Set up environment variables:
+Configure your Gemini API key:
 
 ```bash
 cp .env.example .env
 # Edit .env and add your GEMINI_API_KEY
 ```
+
+Restart Claude Code and verify by typing `/logo-generator` in the conversation.
 
 ### Usage
 
@@ -197,6 +227,24 @@ Contributions welcome! Please feel free to submit issues or pull requests.
 
 专业的 SVG Logo 生成器，配备高端展示效果。基于产品特性生成 6+ 个设计变体，并使用 12 种专业背景风格创建精美的展示图。
 
+### 关于本项目
+
+这个技能的诞生源于一个常见痛点：如何在不牺牲质量的前提下快速生成专业 Logo。传统设计流程需要与设计师反复沟通，而 AI 生成的 Logo 往往缺乏精致度和展示效果。
+
+**Logo Generator** 通过以下方式解决这个问题：
+- 应用经过验证的设计原则（极致简洁、慷慨留白、精准比例）
+- 生成多个变体以探索不同方向
+- 创建可直接使用的专业展示图
+- 提供 SVG（可编辑）和 PNG（即用）两种格式
+
+适用场景：
+- **创业公司** 需要快速获得专业 Logo
+- **开发者** 构建个人项目
+- **设计师** 探索初期概念
+- **产品团队** 迭代品牌形象
+
+本技能利用 Gemini 3.1 Flash Image Preview (Nano Banana) 生成高端展示图，效果媲美专业设计工作室。
+
 ### 功能特性
 
 - **SVG Logo 生成**：创建几何 Logo，支持点阵、线条系统和混合构图
@@ -207,33 +255,45 @@ Contributions welcome! Please feel free to submit issues or pull requests.
 
 ### 安装方式
 
-#### 方式 1：AI 辅助安装（推荐）
-
-直接告诉你的 AI 助手：
-
-```
-从 /path/to/logo-generator 安装 logo-generator skill
-```
-
-AI 会自动设置并启用该技能。
-
-#### 方式 2：手动安装
-
-1. 克隆或下载此仓库
-2. 将 `logo-generator` 文件夹复制到你的 skills 目录
-3. 安装 Python 依赖：
+#### 方法 1：自动安装（推荐）
 
 ```bash
-cd logo-generator
+npx skills add https://github.com/YOUR_USERNAME/logo-generator.git
+```
+
+这将自动将技能安装到正确的目录。
+
+#### 方法 2：Git 克隆
+
+```bash
+git clone https://github.com/YOUR_USERNAME/logo-generator.git ~/.claude/skills/logo-generator
+```
+
+#### 方法 3：手动安装
+
+1. 下载本仓库
+2. 将 `logo-generator` 文件夹复制到 Claude Code 技能目录：
+   - **macOS/Linux**：`~/.claude/skills/`
+   - **Windows**：`%USERPROFILE%\.claude\skills\`
+3. 确保文件夹结构包含 `SKILL.md` 和 `README.md`
+
+#### 安装后配置
+
+安装完成后，设置所需的依赖：
+
+```bash
+cd ~/.claude/skills/logo-generator
 pip install -r requirements.txt
 ```
 
-4. 设置环境变量：
+配置 Gemini API 密钥：
 
 ```bash
 cp .env.example .env
-# 编辑 .env 文件，添加你的 GEMINI_API_KEY
+# 编辑 .env 文件并添加你的 GEMINI_API_KEY
 ```
+
+重启 Claude Code 并在对话中输入 `/logo-generator` 验证安装成功。
 
 ### 使用方法
 
