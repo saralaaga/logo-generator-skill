@@ -39,6 +39,34 @@ class GenerateShowcaseTests(unittest.TestCase):
         self.assertEqual(data["prompt"], "prompt")
         self.assertEqual(data["response_format"], "b64_json")
 
+    def test_build_image2_configs_uses_fallback_after_primary(self):
+        configs = generate_showcase.build_image2_configs(
+            primary_key="primary-key",
+            primary_url="primary-url",
+            primary_model="primary-model",
+            fallback_key="fallback-key",
+            fallback_url="fallback-url",
+            fallback_model="fallback-model",
+        )
+
+        self.assertEqual([config["name"] for config in configs], ["primary", "fallback"])
+        self.assertEqual(configs[1]["api_key"], "fallback-key")
+        self.assertEqual(configs[1]["image_edit_url"], "fallback-url")
+        self.assertEqual(configs[1]["model"], "fallback-model")
+
+    def test_build_image2_configs_allows_fallback_only(self):
+        configs = generate_showcase.build_image2_configs(
+            primary_key="",
+            primary_url="",
+            primary_model="primary-model",
+            fallback_key="fallback-key",
+            fallback_url="fallback-url",
+            fallback_model="fallback-model",
+        )
+
+        self.assertEqual(len(configs), 1)
+        self.assertEqual(configs[0]["name"], "fallback")
+
     def test_parser_exposes_image2_provider_settings(self):
         parser = generate_showcase.build_parser()
         args = parser.parse_args([

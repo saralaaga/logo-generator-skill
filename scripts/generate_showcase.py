@@ -21,7 +21,9 @@ except ImportError:
     genai = None
     types = None
 
-load_dotenv()
+SKILL_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(SKILL_DIR / ".env")
+load_dotenv(SKILL_DIR / ".env.local", override=True)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_API_BASE_URL = os.getenv("GEMINI_API_BASE_URL", "").strip()
@@ -30,6 +32,9 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-image-preview")
 IMAGE2_API_KEY = os.getenv("IMAGE2_API_KEY")
 IMAGE2_IMAGE_EDIT_URL = os.getenv("IMAGE2_IMAGE_EDIT_URL", "").strip()
 IMAGE2_MODEL = os.getenv("IMAGE2_MODEL", "gpt-image-2-pro")
+IMAGE2_FALLBACK_API_KEY = os.getenv("IMAGE2_FALLBACK_API_KEY")
+IMAGE2_FALLBACK_IMAGE_EDIT_URL = os.getenv("IMAGE2_FALLBACK_IMAGE_EDIT_URL", "").strip()
+IMAGE2_FALLBACK_MODEL = os.getenv("IMAGE2_FALLBACK_MODEL", IMAGE2_MODEL)
 IMAGE2_SIZE = os.getenv("IMAGE2_SIZE", "2048x1152")
 IMAGE2_RESPONSE_FORMAT = os.getenv("IMAGE2_RESPONSE_FORMAT", "b64_json")
 IMAGE2_TIMEOUT = int(os.getenv("IMAGE2_TIMEOUT", "300"))
@@ -176,6 +181,32 @@ def build_image2_form_data(prompt: str, model: str) -> Dict[str, str]:
     }
 
 
+def build_image2_configs(
+    primary_key: Optional[str] = IMAGE2_API_KEY,
+    primary_url: str = IMAGE2_IMAGE_EDIT_URL,
+    primary_model: str = IMAGE2_MODEL,
+    fallback_key: Optional[str] = IMAGE2_FALLBACK_API_KEY,
+    fallback_url: str = IMAGE2_FALLBACK_IMAGE_EDIT_URL,
+    fallback_model: str = IMAGE2_FALLBACK_MODEL,
+) -> list:
+    configs = []
+    if primary_key and primary_url:
+        configs.append({
+            "name": "primary",
+            "api_key": primary_key,
+            "image_edit_url": primary_url,
+            "model": primary_model,
+        })
+    if fallback_key and fallback_url:
+        configs.append({
+            "name": "fallback",
+            "api_key": fallback_key,
+            "image_edit_url": fallback_url,
+            "model": fallback_model,
+        })
+    return configs
+
+
 def save_image_payload(payload: Tuple[str, str], output_path: str, api_key: Optional[str] = None) -> None:
     kind, value = payload
     if kind == "b64":
@@ -198,11 +229,10 @@ def generate_showcase_image2(
     product_description: str = "",
     model: str = IMAGE2_MODEL,
 ) -> bool:
-    if not IMAGE2_API_KEY:
-        print("Error: IMAGE2_API_KEY not set in environment")
-        return False
-    if not IMAGE2_IMAGE_EDIT_URL:
-        print("Error: IMAGE2_IMAGE_EDIT_URL not set in environment")
+    configs = build_image2_configs(primary_model=model)
+    if not configs:
+        print("Error: IMAGE2_API_KEY and IMAGE2_IMAGE_EDIT_URL not set in environment")
+        print("Optional fallback: IMAGE2_FALLBACK_API_KEY and IMAGE2_FALLBACK_IMAGE_EDIT_URL")
         return False
 
     try:
@@ -212,39 +242,42 @@ def generate_showcase_image2(
         return False
 
     print(f"Generating showcase image with style: {style}")
-    print(f"Using Image2 model: {model}")
-    print("Using Image2 image edit endpoint from IMAGE2_IMAGE_EDIT_URL")
 
-    try:
-        with open(reference_image_path, "rb") as image:
-            response = requests.post(
-                IMAGE2_IMAGE_EDIT_URL,
-                headers={"Authorization": f"Bearer {IMAGE2_API_KEY}"},
-                data=build_image2_form_data(prompt, model),
-                files={"image": (Path(reference_image_path).name, image, "image/png")},
-                timeout=IMAGE2_TIMEOUT,
-            )
-        if response.status_code >= 400:
-            print(f"Error: Image2 request failed ({response.status_code}): {response.text[:500]}")
-            return False
-
+    for index, config in enumerate(configs, start=1):
+        print(f"Using Image2 {config['name']} provider ({index}/{len(configs)})")
+        print(f"Using Image2 model: {config['model']}")
         try:
-            response_json = response.json()
-        except json.JSONDecodeError:
-            print(f"Error: Image2 returned non-JSON response: {response.text[:500]}")
-            return False
+            with open(reference_image_path, "rb") as image:
+                response = requests.post(
+                    config["image_edit_url"],
+                    headers={"Authorization": f"Bearer {config['api_key']}"},
+                    data=build_image2_form_data(prompt, config["model"]),
+                    files={"image": (Path(reference_image_path).name, image, "image/png")},
+                    timeout=IMAGE2_TIMEOUT,
+                )
+            if response.status_code >= 400:
+                print(f"Error: Image2 {config['name']} request failed ({response.status_code}): {response.text[:500]}")
+                continue
 
-        payload = extract_image2_payload(response_json)
-        if not payload:
-            print(f"Error: No image found in Image2 response: {str(response_json)[:500]}")
-            return False
+            try:
+                response_json = response.json()
+            except json.JSONDecodeError:
+                print(f"Error: Image2 {config['name']} returned non-JSON response: {response.text[:500]}")
+                continue
 
-        save_image_payload(payload, output_path, IMAGE2_API_KEY)
-        print(f"✓ Showcase image saved: {output_path}")
-        return True
-    except Exception as e:
-        print(f"Error generating Image2 showcase image: {e}")
-        return False
+            payload = extract_image2_payload(response_json)
+            if not payload:
+                print(f"Error: No image found in Image2 {config['name']} response: {str(response_json)[:500]}")
+                continue
+
+            save_image_payload(payload, output_path, config["api_key"])
+            print(f"✓ Showcase image saved: {output_path}")
+            return True
+        except Exception as e:
+            print(f"Error generating Image2 showcase image with {config['name']} provider: {e}")
+
+    print("Error: all Image2 providers failed")
+    return False
 
 
 def generate_showcase_image_gemini(

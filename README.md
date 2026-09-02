@@ -213,6 +213,9 @@ GEMINI_MODEL=gemini-3.1-flash-image-preview
 IMAGE2_API_KEY=your_image2_api_key_here
 IMAGE2_IMAGE_EDIT_URL=your_image2_image_edit_endpoint_here
 IMAGE2_MODEL=gpt-image-2-pro
+IMAGE2_FALLBACK_API_KEY=your_fallback_image2_api_key_here
+IMAGE2_FALLBACK_IMAGE_EDIT_URL=your_fallback_image2_image_edit_endpoint_here
+IMAGE2_FALLBACK_MODEL=gpt-image-2-pro
 IMAGE2_SIZE=2048x1152
 ```
 
@@ -443,6 +446,9 @@ GEMINI_MODEL=gemini-3.1-flash-image-preview
 IMAGE2_API_KEY=your_image2_api_key_here
 IMAGE2_IMAGE_EDIT_URL=your_image2_image_edit_endpoint_here
 IMAGE2_MODEL=gpt-image-2-pro
+IMAGE2_FALLBACK_API_KEY=your_fallback_image2_api_key_here
+IMAGE2_FALLBACK_IMAGE_EDIT_URL=your_fallback_image2_image_edit_endpoint_here
+IMAGE2_FALLBACK_MODEL=gpt-image-2-pro
 IMAGE2_SIZE=2048x1152
 ```
 

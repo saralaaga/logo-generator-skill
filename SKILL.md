@@ -82,6 +82,7 @@ Once the user selects a preferred logo direction:
    - Or generate specific styles individually
    - Default provider is Gemini/Nano Banana
    - To use Image2, set `IMAGE2_API_KEY` and `IMAGE2_IMAGE_EDIT_URL`, then pass `--provider image2 --image2-model gpt-image-2-pro`
+   - Optional fallback is supported with `IMAGE2_FALLBACK_API_KEY` and `IMAGE2_FALLBACK_IMAGE_EDIT_URL`
    - Each image uses the PNG as reference through Gemini content generation or an Image2-compatible image edit endpoint
 
 4. **Create final presentation webpage**
@@ -125,7 +126,7 @@ The `generate_showcase.py` script requires:
 - Environment variables in `.env` file
 - Reference PNG image (exported from SVG)
 
-Supports both official Google Gemini API and third-party endpoints via `GEMINI_API_BASE_URL`. Also supports Image2-compatible image edit providers with `IMAGE2_API_KEY` and `IMAGE2_IMAGE_EDIT_URL`.
+Supports both official Google Gemini API and third-party endpoints via `GEMINI_API_BASE_URL`. Also supports Image2-compatible image edit providers with `IMAGE2_API_KEY` and `IMAGE2_IMAGE_EDIT_URL`, plus optional fallback provider variables.
 
 ### Available Background Styles
 
@@ -192,7 +193,8 @@ For more patterns and combinations, see `references/design_patterns.md`.
 
 **Showcase generation fails**: 
 - Gemini: check `.env` file has valid `GEMINI_API_KEY`
-- Image2: check `.env` file has valid `IMAGE2_API_KEY` and `IMAGE2_IMAGE_EDIT_URL`
+- Image2: check `.env` or `.env.local` has valid `IMAGE2_API_KEY` and `IMAGE2_IMAGE_EDIT_URL`
+- Image2 fallback: check `IMAGE2_FALLBACK_API_KEY` and `IMAGE2_FALLBACK_IMAGE_EDIT_URL` if primary provider fails
 - Verify reference PNG exists and is readable
 - Check API quota/rate limits
 
