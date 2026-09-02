@@ -1,7 +1,7 @@
 ---
 name: logo-generator
 description: >
-  Generate professional SVG logos and high-end showcase images. Use when the user wants to: (1) Create a logo or icon for their product/brand, (2) Generate logo design concepts based on product information, (3) Create professional logo showcase presentations with multiple background styles, (4) Export logos in various formats (SVG, PNG), or (5) Iterate on logo designs with different visual styles. Supports geometric patterns, dot matrix designs, line systems, and mixed compositions. Generates showcase images using Nano Banana (Gemini image generation) with 12 professional background styles.
+  Generate professional SVG logos and high-end showcase images. Use when the user wants to: (1) Create a logo or icon for their product/brand, (2) Generate logo design concepts based on product information, (3) Create professional logo showcase presentations with multiple background styles, (4) Export logos in various formats (SVG, PNG), or (5) Iterate on logo designs with different visual styles. Supports geometric patterns, dot matrix designs, line systems, and mixed compositions. Generates showcase images using Nano Banana (Gemini image generation) or an Image2-compatible image edit provider with 12 professional background styles.
 ---
 
 # Logo Generator
@@ -80,7 +80,9 @@ Once the user selects a preferred logo direction:
    - Set up environment (copy `.env.example` to `.env`, add API key)
    - Use `scripts/generate_showcase.py` with `--all-styles` flag
    - Or generate specific styles individually
-   - Each image uses the PNG as reference with Nano Banana API
+   - Default provider is Gemini/Nano Banana
+   - To use Image2, set `IMAGE2_API_KEY` and `IMAGE2_IMAGE_EDIT_URL`, then pass `--provider image2 --image2-model gpt-image-2-pro`
+   - Each image uses the PNG as reference through Gemini content generation or an Image2-compatible image edit endpoint
 
 4. **Create final presentation webpage**
    - Combine SVG variants and showcase images
@@ -123,7 +125,7 @@ The `generate_showcase.py` script requires:
 - Environment variables in `.env` file
 - Reference PNG image (exported from SVG)
 
-Supports both official Google Gemini API and third-party endpoints via `GEMINI_API_BASE_URL`.
+Supports both official Google Gemini API and third-party endpoints via `GEMINI_API_BASE_URL`. Also supports Image2-compatible image edit providers with `IMAGE2_API_KEY` and `IMAGE2_IMAGE_EDIT_URL`.
 
 ### Available Background Styles
 
@@ -189,8 +191,9 @@ For more patterns and combinations, see `references/design_patterns.md`.
 **PNG export fails**: Verify cairosvg is installed (`pip install cairosvg`)
 
 **Showcase generation fails**: 
-- Check `.env` file has valid `GEMINI_API_KEY`
+- Gemini: check `.env` file has valid `GEMINI_API_KEY`
+- Image2: check `.env` file has valid `IMAGE2_API_KEY` and `IMAGE2_IMAGE_EDIT_URL`
 - Verify reference PNG exists and is readable
 - Check API quota/rate limits
 
-**Third-party API not working**: Ensure `GEMINI_API_BASE_URL` is correctly formatted (e.g., `https://api.example.com/v1`)
+**Third-party API not working**: Ensure `GEMINI_API_BASE_URL` is correctly formatted for your provider.

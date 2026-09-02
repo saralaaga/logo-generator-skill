@@ -33,7 +33,7 @@ The skill leverages Gemini 3.1 Flash Image Preview (Nano Banana) to generate hig
 - **SVG Logo Generation**: Create geometric logos with dot matrix, line systems, and mixed compositions
 - **Design Variety**: Generate 6+ distinct variants per request with different pattern types
 - **Professional Showcase**: 12 curated background styles (void, frosted, fluid, spotlight, analog liquid, LED matrix, editorial, iridescent, morning, clinical, UI container, Swiss flat)
-- **Nano Banana Integration**: High-end showcase images using Gemini 3.1 Flash Image Preview
+- **Showcase Image Integration**: High-end showcase images using Gemini 3.1 Flash Image Preview or Image2-compatible providers
 - **Interactive Previews**: Beautiful HTML showcases with hover effects and smooth transitions
 
 ### Installation
@@ -128,7 +128,7 @@ Collect product name, industry, core concept, and design preferences
 **Phase 4: High-End Showcase Generation**  
 - Export SVG to PNG (1024x1024px)
 - Select 4 showcase styles based on product type
-- Generate showcase images with Nano Banana
+- Generate showcase images with Gemini/Nano Banana or Image2
 - Create final presentation webpage
 
 **Phase 5: Delivery**  
@@ -187,8 +187,8 @@ logo-generator/
 ### Requirements
 
 - Python 3.8+
-- Dependencies: `google-genai`, `python-dotenv`, `cairosvg`, `Pillow`
-- Gemini API key (for showcase generation)
+- Dependencies: `google-genai`, `python-dotenv`, `requests`, `cairosvg`, `Pillow`
+- Gemini API key or Image2 API key (for showcase generation)
 
 ### API Configuration
 
@@ -203,8 +203,21 @@ GEMINI_MODEL=gemini-3.1-flash-image-preview
 
 ```env
 GEMINI_API_KEY=your_api_key_here
-GEMINI_API_BASE_URL=https://api.example.com/v1
+GEMINI_API_BASE_URL=your_gemini_compatible_endpoint_here
 GEMINI_MODEL=gemini-3.1-flash-image-preview
+```
+
+#### Image2-Compatible Image Edit Provider
+
+```env
+IMAGE2_API_KEY=your_image2_api_key_here
+IMAGE2_IMAGE_EDIT_URL=your_image2_image_edit_endpoint_here
+IMAGE2_MODEL=gpt-image-2-pro
+IMAGE2_SIZE=2048x1152
+```
+
+```bash
+python scripts/generate_showcase.py DataFlow logo.png --provider image2 --image2-model gpt-image-2-pro
 ```
 
 ### License
@@ -250,7 +263,7 @@ Contributions welcome! Please feel free to submit issues or pull requests.
 - **SVG Logo 生成**：创建几何 Logo，支持点阵、线条系统和混合构图
 - **设计多样性**：每次请求生成 6+ 个不同范式的设计变体
 - **专业展示**：12 种精选背景风格（绝对虚空、磨砂穹顶、流体深渊、聚光灯、物理流体、LED 矩阵、编辑纸张、幻彩透砂、晨曦光晕、临床工作室、UI 容器、瑞士扁平）
-- **Nano Banana 集成**：使用 Gemini 3.1 Flash Image Preview 生成高端展示图
+- **展示图生成集成**：使用 Gemini 3.1 Flash Image Preview 或 Image2-compatible provider 生成高端展示图
 - **交互式预览**：精美的 HTML 展示页面，带悬停效果和流畅过渡
 
 ### 安装方式
@@ -345,7 +358,7 @@ cp .env.example .env
 **阶段 4：高端展示图生成**  
 - 导出 SVG 为 PNG（1024x1024px）
 - 根据产品类型选择 4 种展示风格
-- 使用 Nano Banana 生成展示图
+- 使用 Gemini/Nano Banana 或 Image2 生成展示图
 - 创建最终展示网页
 
 **阶段 5：交付**  
@@ -404,8 +417,8 @@ logo-generator/
 ### 系统要求
 
 - Python 3.8+
-- 依赖：`google-genai`、`python-dotenv`、`cairosvg`、`Pillow`
-- Gemini API 密钥（用于展示图生成）
+- 依赖：`google-genai`、`python-dotenv`、`requests`、`cairosvg`、`Pillow`
+- Gemini API 密钥或 Image2 API 密钥（用于展示图生成）
 
 ### API 配置
 
@@ -420,8 +433,21 @@ GEMINI_MODEL=gemini-3.1-flash-image-preview
 
 ```env
 GEMINI_API_KEY=your_api_key_here
-GEMINI_API_BASE_URL=https://api.example.com/v1
+GEMINI_API_BASE_URL=your_gemini_compatible_endpoint_here
 GEMINI_MODEL=gemini-3.1-flash-image-preview
+```
+
+#### Image2-Compatible Image Edit Provider
+
+```env
+IMAGE2_API_KEY=your_image2_api_key_here
+IMAGE2_IMAGE_EDIT_URL=your_image2_image_edit_endpoint_here
+IMAGE2_MODEL=gpt-image-2-pro
+IMAGE2_SIZE=2048x1152
+```
+
+```bash
+python scripts/generate_showcase.py DataFlow logo.png --provider image2 --image2-model gpt-image-2-pro
 ```
 
 ### 开源协议

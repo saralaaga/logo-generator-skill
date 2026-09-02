@@ -1,34 +1,39 @@
 #!/usr/bin/env python3
 """
-Generate logo showcase images using Nano Banana (Gemini Image Generation API).
-Supports both official Google API and third-party API endpoints.
+Generate logo showcase images using Gemini/Nano Banana or an Image2-compatible
+image edit endpoint supplied by environment variables.
 """
 
-import os
-import sys
-import base64
 import argparse
+import base64
+import json
+import os
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional, Tuple
+
+import requests
 from dotenv import load_dotenv
 
 try:
     from google import genai
     from google.genai import types
 except ImportError:
-    print("Error: google-genai package not installed.")
-    print("Install with: pip install google-genai")
-    sys.exit(1)
+    genai = None
+    types = None
 
-# Load environment variables
 load_dotenv()
 
-# Configuration
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_API_BASE_URL = os.getenv("GEMINI_API_BASE_URL", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-image-preview")
 
-# Background style prompts from the reference document
+IMAGE2_API_KEY = os.getenv("IMAGE2_API_KEY")
+IMAGE2_IMAGE_EDIT_URL = os.getenv("IMAGE2_IMAGE_EDIT_URL", "").strip()
+IMAGE2_MODEL = os.getenv("IMAGE2_MODEL", "gpt-image-2-pro")
+IMAGE2_SIZE = os.getenv("IMAGE2_SIZE", "2048x1152")
+IMAGE2_RESPONSE_FORMAT = os.getenv("IMAGE2_RESPONSE_FORMAT", "b64_json")
+IMAGE2_TIMEOUT = int(os.getenv("IMAGE2_TIMEOUT", "300"))
+
 BACKGROUND_STYLES = {
     "void": """THE VOID (绝对虚空)
 Absolute black (#000000) background with extremely fine silver/white high-contrast micro noise.
@@ -99,61 +104,22 @@ Extreme confidence and timeless authority. Classic Swiss International Style wit
 
 
 def load_reference_image(image_path: str) -> Optional[str]:
-    """Load and encode reference image to base64."""
     try:
-        with open(image_path, 'rb') as f:
-            image_data = f.read()
-        return base64.b64encode(image_data).decode('utf-8')
+        with open(image_path, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
     except Exception as e:
         print(f"Error loading reference image: {e}")
         return None
 
 
-def generate_showcase_image(
-    logo_name: str,
-    reference_image_path: str,
-    style: str,
-    output_path: str,
-    product_description: str = ""
-) -> bool:
-    """
-    Generate a showcase image using Nano Banana API.
-
-    Args:
-        logo_name: Name of the logo/product
-        reference_image_path: Path to the reference logo image (SVG exported as PNG)
-        style: Background style key (void, frosted, fluid, iridescent)
-        output_path: Path to save the generated image
-        product_description: Optional product description for context
-
-    Returns:
-        True if successful, False otherwise
-    """
-    if not GEMINI_API_KEY:
-        print("Error: GEMINI_API_KEY not set in environment")
-        return False
-
+def build_showcase_prompt(logo_name: str, style: str, product_description: str = "") -> str:
     if style not in BACKGROUND_STYLES:
-        print(f"Error: Unknown style '{style}'. Available: {list(BACKGROUND_STYLES.keys())}")
-        return False
+        raise ValueError(f"Unknown style '{style}'. Available: {list(BACKGROUND_STYLES.keys())}")
 
-    # Load reference image
-    reference_image_b64 = load_reference_image(reference_image_path)
-    if not reference_image_b64:
-        return False
+    dark_styles = {"void", "frosted", "fluid", "spotlight", "analog_liquid", "led_matrix"}
+    logo_color = "pure white (#FFFFFF)" if style in dark_styles else "pure black (#000000)"
 
-    # Build the prompt
-    style_description = BACKGROUND_STYLES[style]
-
-    # Determine logo color based on background style
-    # Dark backgrounds use white logo, light backgrounds use black logo
-    dark_styles = ["void", "frosted", "fluid", "spotlight", "analog_liquid", "led_matrix"]
-    light_styles = ["editorial", "iridescent", "morning", "clinical", "ui_container", "swiss_flat"]
-
-    is_dark_bg = style in dark_styles
-    logo_color = "pure white (#FFFFFF)" if is_dark_bg else "pure black (#000000)"
-
-    prompt = f"""Extract the core graphic from the reference image as a pure flat single-color vector structure,
+    return f"""Extract the core graphic from the reference image as a pure flat single-color vector structure,
 removing all decorations. Use high-contrast atmosphere background, delicate film grain noise,
 and rigorous micro-typography to create a cutting-edge, restrained, and highly digital order showcase effect.
 
@@ -165,7 +131,7 @@ LOGO PROCESSING:
 - The logo MUST be rendered in {logo_color} to ensure maximum contrast with the background
 
 BACKGROUND CONSTRUCTION:
-{style_description}
+{BACKGROUND_STYLES[style]}
 
 TYPOGRAPHY AND LAYOUT:
 Use classic Swiss-style typography logic with extreme proportion contrast.
@@ -181,15 +147,137 @@ Use classic Swiss-style typography logic with extreme proportion contrast.
 CRITICAL: The logo graphic MUST be {logo_color}, perfectly centered, extracted from the reference image,
 rendered as pure flat vector with sharp edges."""
 
+
+def extract_image2_payload(response_json: Any) -> Optional[Tuple[str, str]]:
+    if isinstance(response_json, dict):
+        if isinstance(response_json.get("b64_json"), str):
+            return "b64", response_json["b64_json"]
+        if isinstance(response_json.get("url"), str):
+            return "url", response_json["url"]
+        for key in ("data", "result", "output"):
+            found = extract_image2_payload(response_json.get(key))
+            if found:
+                return found
+    elif isinstance(response_json, list):
+        for item in response_json:
+            found = extract_image2_payload(item)
+            if found:
+                return found
+    return None
+
+
+def build_image2_form_data(prompt: str, model: str) -> Dict[str, str]:
+    return {
+        "model": model,
+        "prompt": prompt,
+        "size": IMAGE2_SIZE,
+        "n": "1",
+        "response_format": IMAGE2_RESPONSE_FORMAT,
+    }
+
+
+def save_image_payload(payload: Tuple[str, str], output_path: str, api_key: Optional[str] = None) -> None:
+    kind, value = payload
+    if kind == "b64":
+        Path(output_path).write_bytes(base64.b64decode(value))
+        return
+    if kind == "url":
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        response = requests.get(value, headers=headers, timeout=IMAGE2_TIMEOUT)
+        response.raise_for_status()
+        Path(output_path).write_bytes(response.content)
+        return
+    raise ValueError(f"Unsupported image payload kind: {kind}")
+
+
+def generate_showcase_image2(
+    logo_name: str,
+    reference_image_path: str,
+    style: str,
+    output_path: str,
+    product_description: str = "",
+    model: str = IMAGE2_MODEL,
+) -> bool:
+    if not IMAGE2_API_KEY:
+        print("Error: IMAGE2_API_KEY not set in environment")
+        return False
+    if not IMAGE2_IMAGE_EDIT_URL:
+        print("Error: IMAGE2_IMAGE_EDIT_URL not set in environment")
+        return False
+
     try:
-        # Initialize client
+        prompt = build_showcase_prompt(logo_name, style, product_description)
+    except ValueError as e:
+        print(f"Error: {e}")
+        return False
+
+    print(f"Generating showcase image with style: {style}")
+    print(f"Using Image2 model: {model}")
+    print("Using Image2 image edit endpoint from IMAGE2_IMAGE_EDIT_URL")
+
+    try:
+        with open(reference_image_path, "rb") as image:
+            response = requests.post(
+                IMAGE2_IMAGE_EDIT_URL,
+                headers={"Authorization": f"Bearer {IMAGE2_API_KEY}"},
+                data=build_image2_form_data(prompt, model),
+                files={"image": (Path(reference_image_path).name, image, "image/png")},
+                timeout=IMAGE2_TIMEOUT,
+            )
+        if response.status_code >= 400:
+            print(f"Error: Image2 request failed ({response.status_code}): {response.text[:500]}")
+            return False
+
+        try:
+            response_json = response.json()
+        except json.JSONDecodeError:
+            print(f"Error: Image2 returned non-JSON response: {response.text[:500]}")
+            return False
+
+        payload = extract_image2_payload(response_json)
+        if not payload:
+            print(f"Error: No image found in Image2 response: {str(response_json)[:500]}")
+            return False
+
+        save_image_payload(payload, output_path, IMAGE2_API_KEY)
+        print(f"✓ Showcase image saved: {output_path}")
+        return True
+    except Exception as e:
+        print(f"Error generating Image2 showcase image: {e}")
+        return False
+
+
+def generate_showcase_image_gemini(
+    logo_name: str,
+    reference_image_path: str,
+    style: str,
+    output_path: str,
+    product_description: str = "",
+) -> bool:
+    if not GEMINI_API_KEY:
+        print("Error: GEMINI_API_KEY not set in environment")
+        return False
+    if genai is None or types is None:
+        print("Error: google-genai package not installed.")
+        print("Install with: pip install google-genai")
+        return False
+
+    reference_image_b64 = load_reference_image(reference_image_path)
+    if not reference_image_b64:
+        return False
+
+    try:
+        prompt = build_showcase_prompt(logo_name, style, product_description)
+    except ValueError as e:
+        print(f"Error: {e}")
+        return False
+
+    try:
         client_config = {"api_key": GEMINI_API_KEY}
         if GEMINI_API_BASE_URL:
             client_config["http_options"] = {"api_endpoint": GEMINI_API_BASE_URL}
 
         client = genai.Client(**client_config)
-
-        # Prepare content with reference image
         contents = [
             types.Part.from_bytes(
                 data=base64.b64decode(reference_image_b64),
@@ -199,11 +287,10 @@ rendered as pure flat vector with sharp edges."""
         ]
 
         print(f"Generating showcase image with style: {style}")
-        print(f"Using model: {GEMINI_MODEL}")
+        print(f"Using Gemini model: {GEMINI_MODEL}")
         if GEMINI_API_BASE_URL:
-            print(f"Using custom API endpoint: {GEMINI_API_BASE_URL}")
+            print("Using custom Gemini API endpoint")
 
-        # Generate image with 16:9 aspect ratio and 2K resolution
         response = client.models.generate_content(
             model=GEMINI_MODEL,
             contents=contents,
@@ -216,51 +303,85 @@ rendered as pure flat vector with sharp edges."""
             )
         )
 
-        # Save generated image
         for part in response.parts:
             if part.inline_data is not None:
                 image = part.as_image()
                 image.save(output_path)
                 print(f"✓ Showcase image saved: {output_path}")
                 return True
-            elif part.text is not None:
+            if part.text is not None:
                 print(f"Model response: {part.text}")
 
         print("Error: No image generated in response")
         return False
-
     except Exception as e:
-        print(f"Error generating showcase image: {e}")
+        print(f"Error generating Gemini showcase image: {e}")
         return False
 
 
-def main():
+def generate_showcase_image(
+    logo_name: str,
+    reference_image_path: str,
+    style: str,
+    output_path: str,
+    product_description: str = "",
+    provider: str = "gemini",
+    image2_model: str = IMAGE2_MODEL,
+) -> bool:
+    if provider == "image2":
+        return generate_showcase_image2(
+            logo_name,
+            reference_image_path,
+            style,
+            output_path,
+            product_description,
+            image2_model,
+        )
+    return generate_showcase_image_gemini(
+        logo_name,
+        reference_image_path,
+        style,
+        output_path,
+        product_description,
+    )
+
+
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generate logo showcase images using Nano Banana API"
+        description="Generate logo showcase images using Gemini/Nano Banana or Image2"
     )
     parser.add_argument("logo_name", help="Name of the logo/product")
     parser.add_argument("reference_image", help="Path to reference logo image (PNG)")
     parser.add_argument("--style",
-                       choices=list(BACKGROUND_STYLES.keys()),
-                       default="iridescent",
-                       help="Background style")
+                        choices=list(BACKGROUND_STYLES.keys()),
+                        default="iridescent",
+                        help="Background style")
     parser.add_argument("--output", "-o",
-                       help="Output path (default: output/{logo_name}_{style}.png)")
+                        help="Output path (default: output/{logo_name}_{style}.png)")
     parser.add_argument("--description", "-d",
-                       default="",
-                       help="Product description for context")
+                        default="",
+                        help="Product description for context")
     parser.add_argument("--all-styles",
-                       action="store_true",
-                       help="Generate all 13 styles")
+                        action="store_true",
+                        help="Generate all 12 styles")
+    parser.add_argument("--provider",
+                        choices=["gemini", "image2"],
+                        default=os.getenv("SHOWCASE_PROVIDER", "gemini"),
+                        help="Image generation provider")
+    parser.add_argument("--image2-model",
+                        default=IMAGE2_MODEL,
+                        help="Image2 model, e.g. gpt-image-2 or gpt-image-2-pro")
+    return parser
 
+
+def main() -> None:
+    parser = build_parser()
     args = parser.parse_args()
 
-    # Create output directory
     output_dir = Path("output")
     output_dir.mkdir(exist_ok=True)
 
     if args.all_styles:
-        # Generate all 4 styles
         success_count = 0
         for style in BACKGROUND_STYLES.keys():
             output_path = output_dir / f"{args.logo_name}_{style}.png"
@@ -269,27 +390,26 @@ def main():
                 args.reference_image,
                 style,
                 str(output_path),
-                args.description
+                args.description,
+                args.provider,
+                args.image2_model,
             ):
                 success_count += 1
 
         print(f"\n✓ Generated {success_count}/{len(BACKGROUND_STYLES)} showcase images")
-    else:
-        # Generate single style
-        if args.output:
-            output_path = args.output
-        else:
-            output_path = output_dir / f"{args.logo_name}_{args.style}.png"
+        return
 
-        success = generate_showcase_image(
-            args.logo_name,
-            args.reference_image,
-            args.style,
-            str(output_path),
-            args.description
-        )
-
-        sys.exit(0 if success else 1)
+    output_path = args.output or output_dir / f"{args.logo_name}_{args.style}.png"
+    success = generate_showcase_image(
+        args.logo_name,
+        args.reference_image,
+        args.style,
+        str(output_path),
+        args.description,
+        args.provider,
+        args.image2_model,
+    )
+    raise SystemExit(0 if success else 1)
 
 
 if __name__ == "__main__":
